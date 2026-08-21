@@ -17,7 +17,7 @@ import {
 import { supabase } from "@/lib/supabase";
 
 // =========================================================================
-// 2. MULTI-LANGUAGE TRANSLATION DICTIONARY
+// 2. MULTI-LANGUAGE TRANSLATION DICTIONARY (ENGLISH & HINDI)
 // =========================================================================
 const translations = {
   English: {
@@ -82,70 +82,6 @@ const translations = {
       "Analyzing silhouette & real-time weather...",
       "Matching fabric & undertone coordinates...",
       "Curating tailored aesthetic fits...",
-    ],
-  },
-  Hinglish: {
-    tagline: "AI Personal Stylist",
-    stylistTab: "Stylist",
-    historyTab: "History",
-    closetTab: "Closet",
-    loginBtn: "Login",
-    logoutBtn: "Logout",
-    weatherPill: "Mausam",
-    dnaBannerTitle: "Style DNA & Mausam Sync",
-    dnaBannerEdit: "Badlo",
-    uploadTitle: "Outfit / Khud ki Photo Upload Karo",
-    takePhotoBtn: "Camera",
-    uploadGalleryBtn: "Gallery",
-    uploadSubtext: "Fast scanning ke liye auto-compress hogi",
-    retakePhoto: "Change",
-    occasionTitle: "Occasion Select Karo",
-    occasions: ["Casual", "College / Work", "Party Night", "Formal", "Date"],
-    generateBtn: "Mausam & DNA Ke Hisab Se Fit Banao",
-    optionClassic: "Option 1: Classic",
-    optionBold: "Option 2: Bold",
-    topwear: "TOPWEAR",
-    bottomwear: "BOTTOMWEAR",
-    footwear: "FOOTWEAR",
-    shopBtn: "Shop",
-    paletteTitle: "Color Palette:",
-    stylistNote: "Stylist Tip:",
-    downloadCard: "Download Story Card",
-    uploadAlert: "Pehle photo click ya upload karo!",
-    historyHeading: "Automatic Scan History",
-    historyLoginPrompt: "History ko cloud pe save karne ke liye login karo!",
-    historyEmpty: "Abhi koi history nahi hai. Stylist tab pe jaake scan karo!",
-    scannedOn: "Scan hua:",
-    closetHeading: "Saved Favorite Fits",
-    closetLoginPrompt: "Saved fits dekhne ke liye login karo!",
-    closetEmpty: "Abhi koi outfit save nahi kiya. Recommendation aane pe ❤️ dabao!",
-    privacyHeading: "Privacy & App Policy",
-    privacySub: "Aapki photo kabhi sell nahi hoti. Aap jab chahe apna data delete kar sakte hain.",
-    deleteAccountBtn: "Mera Sara Data Delete Karo",
-    dnaModalTitle: "Style DNA & Settings",
-    dnaModalSub: "AI mausam, fitting aur colors ko customize karega.",
-    langSection: "Language / भाषा Chuno",
-    skinSection: "Skin Tone",
-    heightSection: "Height",
-    buildSection: "Body Frame",
-    styleSection: "Style Preference",
-    saveDnaBtn: "Settings Save Karo",
-    authLoginTitle: "Stylo mein Welcome Back",
-    authLoginSub: "History aur closet sync karne ke liye login karo",
-    authSignupTitle: "Apna Stylo Account Banao",
-    authSignupSub: "Personal style memory ke liye sign up karo",
-    googleSignIn: "Google se Continue karo",
-    orDivider: "ya email se karo",
-    emailLabel: "Email",
-    passwordLabel: "Password",
-    signInAction: "Sign In",
-    signUpAction: "Account Banao",
-    toggleToSignup: "Account nahi hai? Sign Up karo",
-    toggleToLogin: "Pehle se account hai? Sign In karo",
-    loadingSteps: [
-      "Photo aur live mausam analyze ho raha hai...",
-      "Skin undertone & fabric match ho raha hai...",
-      "Classic & Bold looks curate ho rahe hain...",
     ],
   },
   Hindi: {
@@ -248,7 +184,8 @@ export default function Home() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
-  const [language, setLanguage] = useState<"English" | "Hinglish" | "Hindi">("Hinglish");
+  // Clean Default Language: English
+  const [language, setLanguage] = useState<"English" | "Hindi">("English");
   const t = translations[language];
 
   const [activeTab, setActiveTab] = useState<"stylist" | "history" | "closet">("stylist");
@@ -277,9 +214,9 @@ export default function Home() {
   const [bodyBuild, setBodyBuild] = useState("Athletic / Medium");
   const [preferredStyle, setPreferredStyle] = useState("Clean Minimalist");
 
+  // Only 2 standard options
   const languagesList = [
-    { id: "English", label: "English" },
-    { id: "Hinglish", label: "Hinglish" },
+    { id: "English", label: "EN" },
     { id: "Hindi", label: "हिंदी" }
   ];
 
@@ -333,7 +270,9 @@ export default function Home() {
         if (parsed.height) setHeight(parsed.height);
         if (parsed.bodyBuild) setBodyBuild(parsed.bodyBuild);
         if (parsed.preferredStyle) setPreferredStyle(parsed.preferredStyle);
-        if (parsed.language) setLanguage(parsed.language);
+        if (parsed.language === "Hindi" || parsed.language === "English") {
+          setLanguage(parsed.language);
+        }
       } catch (e) {
         console.error("DNA Load Failed", e);
       }
@@ -374,7 +313,7 @@ export default function Home() {
     setShowDnaModal(false);
   };
 
-  const toggleLanguage = (newLang: "English" | "Hinglish" | "Hindi") => {
+  const toggleLanguage = (newLang: "English" | "Hindi") => {
     setLanguage(newLang);
     const savedDna = localStorage.getItem("stylo_user_dna");
     const currentData = savedDna ? JSON.parse(savedDna) : {};
@@ -505,7 +444,7 @@ export default function Home() {
   };
 
   // =========================================================================
-  // 6. AUTH HANDLERS: EMAIL + DIRECT GOOGLE ACCOUNT CHOOSER POPUP
+  // 6. AUTH HANDLERS: EMAIL + DIRECT GOOGLE OAUTH
   // =========================================================================
   const handleGoogleSignIn = async () => {
     setAuthLoading(true);
@@ -879,7 +818,7 @@ export default function Home() {
                 <button
                   key={langItem.id}
                   onClick={() => toggleLanguage(langItem.id as any)}
-                  className={`text-[10px] px-2 py-1 rounded-full font-bold transition-all ${
+                  className={`text-[10px] px-2.5 py-1 rounded-full font-bold transition-all ${
                     language === langItem.id
                       ? "bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-sm"
                       : "text-neutral-400 hover:text-neutral-200"
@@ -1411,7 +1350,7 @@ export default function Home() {
                   <label className="font-bold text-neutral-300 flex items-center gap-1">
                     <Globe className="w-3.5 h-3.5 text-amber-400" /> {t.langSection}
                   </label>
-                  <div className="grid grid-cols-3 gap-1.5">
+                  <div className="grid grid-cols-2 gap-2">
                     {languagesList.map((l) => (
                       <button
                         key={l.id}
@@ -1423,7 +1362,7 @@ export default function Home() {
                             : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-neutral-700"
                         }`}
                       >
-                        <div className="text-[11px]">{l.label}</div>
+                        <div className="text-xs">{l.id === "English" ? "English" : "हिंदी"}</div>
                       </button>
                     ))}
                   </div>
@@ -1521,7 +1460,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* ================= LOGIN / SIGN UP MODAL (WITH GOOGLE ONE-CLICK) ================= */}
+        {/* ================= LOGIN / SIGN UP MODAL ================= */}
         {showAuthModal && (
           <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
             <div className="w-full max-w-sm bg-neutral-900 border border-neutral-800 rounded-[32px] p-6 flex flex-col gap-4 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
