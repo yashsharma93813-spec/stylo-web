@@ -1,120 +1,116 @@
-// =========================================================================
-// 1. IMPORTS & INITIALIZATION
-// Google Gen AI SDK aur Next.js response helper
-// =========================================================================
+import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
-import { NextResponse } from "next/server";
 
-export async function POST(req: Request) {
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY || "",
+});
+
+export async function POST(req: NextRequest) {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "GEMINI_API_KEY missing in .env.local" },
-        { status: 500 }
-      );
-    }
-
-    const ai = new GoogleGenAI({ apiKey });
-    
     const formData = await req.formData();
-    const file = formData.get("image") as File | null;
+    const image = formData.get("image") as File;
     const occasion = (formData.get("occasion") as string) || "Casual";
-    const language = (formData.get("language") as string) || "Hinglish";
-    
-    // Live Weather Context
     const weather = (formData.get("weather") as string) || "Clear 28°C";
-    
-    // Style DNA parameters
+    const language = (formData.get("language") as string) || "English";
+    const gender = (formData.get("gender") as string) || "Auto-detect";
     const skinTone = (formData.get("skinTone") as string) || "Warm Olive / Wheatish";
-    const height = (formData.get("height") as string) || "Average (5'7 - 5'11)";
-    const bodyBuild = (formData.get("bodyBuild") as string) || "Athletic / Medium";
+    const height = (formData.get("height") as string) || "Average";
+    const bodyBuild = (formData.get("bodyBuild") as string) || "Medium";
     const preferredStyle = (formData.get("preferredStyle") as string) || "Clean Minimalist";
 
-    if (!file) {
-      return NextResponse.json({ error: "Please upload an image" }, { status: 400 });
+    if (!image) {
+      return NextResponse.json({ error: "No image provided" }, { status: 400 });
     }
 
-    const bytes = await file.arrayBuffer();
-    const base64Data = Buffer.from(bytes).toString("base64");
+    const bytes = await image.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    const base64Image = buffer.toString("base64");
 
-    // Language guidelines
-    let langInstruction = "Write styling tips in trendy Hinglish (Hindi + English mix).";
-    if (language === "Hindi") {
-      langInstruction = "Write styling tips and notes in stylish conversational Hindi.";
-    } else if (language === "English") {
-      langInstruction = "Write styling tips and notes in polished modern fashion English.";
-    }
+    const systemPrompt = `
+You are a world-class, honest, highly observant Haute Couture & Streetwear Stylist and Wardrobe Critic.
 
-    // Weather & DNA combined system prompt
-    const prompt = `You are Stylo, an elite AI fashion stylist.
-Analyze the photo with user Style DNA and real-time environmental context:
-- Occasion: "${occasion}"
-- Live Weather: "${weather}" (Adapt fabric layering, breathable cotton/linen for hot weather, jackets/wool for cold weather)
-- Skin Undertone: "${skinTone}"
-- Height: "${height}"
-- Body Build: "${bodyBuild}"
-- Aesthetic: "${preferredStyle}"
-- Selected Language: "${language}"
+USER CONTEXT:
+- Target Gender Preference: ${gender} (If "Auto-detect", carefully inspect the photo to determine if the subject is female/male and suggest ONLY gender-appropriate cuts, silhouettes, and garments).
+- Occasion: ${occasion}
+- Weather / Ambient Temp: ${weather}
+- Skin Undertone: ${skinTone}
+- Height / Build: ${height}, ${bodyBuild}
+- Target Aesthetic: ${preferredStyle}
+- Language: ${language} (If Hindi, provide all styling tips and critique in clean, natural Hindi).
 
-Language Rule: ${langInstruction}
+STRICT CRITICAL RULES:
+1. GENDER ACCURACY: If the image is a female or gender is Women, recommend women's attire (e.g., tailored blouses, flowy trousers, chic dresses, co-ords, skirts, kurtas, heels/sneakers). NEVER recommend men's menswear to women.
+2. NO COLOR REPETITION (AVOID OLIVE GREEN DEFAULT): Do NOT default to olive green, sage, or earthy beige repeatedly. Intentionally explore diverse, high-appeal color combinations tailored to the skin undertone (e.g., Cobalt Blue, Terracotta, Burgundy, Charcoal, Lavender, Crisp Whites, Mustard, Emerald, Dusty Rose, Mocha, Pastels, or Classic Monochromes).
+3. HONEST SCAN & CRITIQUE FIRST:
+   - First, inspect what the user is currently wearing in the uploaded image.
+   - Give an honest critique of their current outfit: what works, what lacks (fit, color clash, or silhouette imbalance), and give their CURRENT outfit a realistic score out of 10.
+4. TWO UPGRADED FIT RECOMMENDATIONS:
+   - Option 1 (Polished / Classic Upgrade): A clean, wearable improvement that builds upon or elevates their current style for the occasion.
+   - Option 2 (Statement / Bold Alternative): A daring, trend-forward, high-contrast aesthetic fit.
 
-Generate exactly 2 distinct recommendations:
-1. Option 1: Classic & Weather-Comfortable Fit
-2. Option 2: Bold & Modern Trend
+OUTPUT FORMAT:
+Return strictly a raw JSON object (without markdown code fences, no \`\`\`json) with this exact schema:
 
-Return strictly valid JSON:
 {
+  "currentScan": {
+    "detectedItems": "Short summary of what they are wearing in the photo",
+    "critique": "Honest breakdown of their current outfit, fit, color harmony, and what to improve",
+    "currentScore": 7
+  },
   "options": [
     {
-      "fitScore": 8.5,
-      "vibe": "Outfit Vibe Name",
-      "top": "Detailed topwear recommendation considering weather",
-      "bottom": "Detailed bottomwear recommendation",
-      "footwear": "Detailed shoes recommendation",
-      "palette": ["#111111", "#333333", "#E5E5E5"],
-      "stylingTip": "Actionable styling tip matching the selected language (${language}) referencing weather comfort and DNA."
+      "vibe": "E.g. Sartorial Minimalist / Chic Casual",
+      "fitScore": 9.2,
+      "top": "Exact topwear description with precise color, texture, cut",
+      "bottom": "Exact bottomwear with fit and complementary color",
+      "footwear": "Matching shoes/footwear",
+      "palette": ["#Hex1", "#Hex2", "#Hex3"],
+      "stylingTip": "Actionable, honest pro-tip on tucking, accessories, proportions, and layering for the current weather."
     },
     {
-      "fitScore": 9.0,
-      "vibe": "Outfit Vibe Name",
-      "top": "Detailed topwear recommendation considering weather",
-      "bottom": "Detailed bottomwear recommendation",
-      "footwear": "Detailed shoes recommendation",
-      "palette": ["#222222", "#555555", "#FFFFFF"],
-      "stylingTip": "Bold actionable tip matching the selected language (${language})."
+      "vibe": "E.g. Bold Contrast / Contemporary Edge",
+      "fitScore": 9.6,
+      "top": "Distinct topwear with vibrant/rich colors",
+      "bottom": "Complementary bottomwear",
+      "footwear": "Matching statement footwear",
+      "palette": ["#Hex1", "#Hex2", "#Hex3"],
+      "stylingTip": "Elevated styling note focusing on jewelry/watches, scent, and silhouette balance."
     }
   ]
-}`;
+}
+`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
+      model: "gemini-2.5-flash",
       contents: [
         {
           role: "user",
           parts: [
-            { text: prompt },
             {
               inlineData: {
-                mimeType: file.type || "image/jpeg",
-                data: base64Data,
+                data: base64Image,
+                mimeType: image.type || "image/jpeg",
               },
+            },
+            {
+              text: systemPrompt,
             },
           ],
         },
       ],
-      config: {
-        responseMimeType: "application/json",
-      },
     });
 
-    let rawText = response.text || "{}";
+    let rawText = response.text || "";
     rawText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
+
     const parsedData = JSON.parse(rawText);
 
     return NextResponse.json({ success: true, data: parsedData });
   } catch (error: any) {
-    console.error("AI Styling Error:", error);
-    return NextResponse.json({ error: error.message || "Styling failed" }, { status: 500 });
+    console.error("Style API Error:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to generate styling critique and recommendation" },
+      { status: 500 }
+    );
   }
 }
