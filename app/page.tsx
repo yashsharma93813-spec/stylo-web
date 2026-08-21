@@ -70,6 +70,8 @@ const translations = {
     authLoginSub: "Login to sync history & closet across devices",
     authSignupTitle: "Create your Stylo Account",
     authSignupSub: "Sign up to unlock personalized style memory",
+    googleSignIn: "Continue with Google",
+    orDivider: "or continue with email",
     emailLabel: "Email",
     passwordLabel: "Password",
     signInAction: "Sign In",
@@ -132,6 +134,8 @@ const translations = {
     authLoginSub: "History aur closet sync karne ke liye login karo",
     authSignupTitle: "Apna Stylo Account Banao",
     authSignupSub: "Personal style memory ke liye sign up karo",
+    googleSignIn: "Google se Continue karo",
+    orDivider: "ya email se karo",
     emailLabel: "Email",
     passwordLabel: "Password",
     signInAction: "Sign In",
@@ -194,6 +198,8 @@ const translations = {
     authLoginSub: "डेटा सिंक करने के लिए लॉग इन करें",
     authSignupTitle: "नया Stylo खाता बनाएं",
     authSignupSub: "व्यक्तिगत स्टाइल अनुभव के लिए साइन अप करें",
+    googleSignIn: "गूगल (Google) से जारी रखें",
+    orDivider: "या ईमेल का उपयोग करें",
     emailLabel: "ईमेल (Email)",
     passwordLabel: "पासवर्ड (Password)",
     signInAction: "लॉग इन करें",
@@ -248,7 +254,6 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<"stylist" | "history" | "closet">("stylist");
   const [selectedOccasion, setSelectedOccasion] = useState("Casual");
   
-  // Real-Time Weather State (Defaults to warm clear weather)
   const [weatherText, setWeatherText] = useState("Clear 29°C");
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -296,10 +301,9 @@ export default function Home() {
   const [savedFits, setSavedFits] = useState<any[]>([]);
 
   // =========================================================================
-  // 4. USE-EFFECT: LIVE WEATHER (Free Open-Meteo API) & SESSION CHECK
+  // 4. USE-EFFECT HOOKS
   // =========================================================================
   useEffect(() => {
-    // 1. Fetch Location Weather
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
@@ -321,7 +325,6 @@ export default function Home() {
       );
     }
 
-    // 2. DNA Load
     const savedDna = localStorage.getItem("stylo_user_dna");
     if (savedDna) {
       try {
@@ -336,7 +339,6 @@ export default function Home() {
       }
     }
 
-    // 3. Supabase Auth
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) fetchUserData(session.user.id);
@@ -380,7 +382,7 @@ export default function Home() {
   };
 
   // =========================================================================
-  // 5. DATABASE OPERATIONS & PLAY STORE COMPLIANT DATA DELETION
+  // 5. DATABASE OPERATIONS
   // =========================================================================
   const fetchUserData = async (userId: string) => {
     try {
@@ -485,7 +487,6 @@ export default function Home() {
     }
   };
 
-  // Google Play / Apple App Store Mandatory Complete Account Data Deletion
   const handleDeleteAllUserData = async () => {
     if (!user) return;
     const confirmDelete = window.confirm("Are you sure you want to permanently delete all your scanned and saved fits?");
@@ -504,8 +505,29 @@ export default function Home() {
   };
 
   // =========================================================================
-  // 6. AUTH HANDLERS
+  // 6. AUTH HANDLERS: EMAIL + DIRECT GOOGLE ACCOUNT CHOOSER POPUP
   // =========================================================================
+  const handleGoogleSignIn = async () => {
+    setAuthLoading(true);
+    setAuthError(null);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
+          queryParams: {
+            prompt: "select_account",
+            access_type: "offline",
+          },
+        },
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      setAuthError(err.message || "Google sign in failed");
+      setAuthLoading(false);
+    }
+  };
+
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthLoading(true);
@@ -545,7 +567,7 @@ export default function Home() {
   };
 
   // =========================================================================
-  // 7. EXPORT AESTHETIC STORY CARD (HTML5 Canvas)
+  // 7. EXPORT AESTHETIC STORY CARD
   // =========================================================================
   const handleDownloadStoryCard = () => {
     if (!currentFit || !imagePreview) return;
@@ -826,7 +848,7 @@ export default function Home() {
     <main className="min-h-screen bg-[#0A0A0C] text-neutral-100 flex justify-center p-3 sm:p-5 selection:bg-rose-500 selection:text-white font-sans antialiased">
       <div className="w-full max-w-md bg-neutral-900/90 backdrop-blur-xl border border-neutral-800/80 rounded-[32px] p-5 sm:p-6 flex flex-col gap-5 shadow-2xl my-auto relative overflow-hidden">
         
-        {/* Hidden inputs for camera capture & gallery */}
+        {/* Hidden inputs */}
         <input
           ref={cameraInputRef}
           type="file"
@@ -852,7 +874,6 @@ export default function Home() {
           <StyloLogo tagline={t.tagline} />
           
           <div className="flex items-center gap-2">
-            {/* Quick Language Switcher Dropdown */}
             <div className="flex bg-neutral-950/90 border border-neutral-800 p-0.5 rounded-full">
               {languagesList.map((langItem) => (
                 <button
@@ -926,7 +947,7 @@ export default function Home() {
         {/* ================= TAB 1: STYLIST GENERATOR ================= */}
         {activeTab === "stylist" && (
           <>
-            {/* Live Weather & Style DNA Interactive Banner */}
+            {/* Live Weather & Style DNA Banner */}
             <div 
               onClick={() => setShowDnaModal(true)}
               className="bg-gradient-to-r from-amber-500/10 via-rose-500/5 to-transparent border border-amber-500/20 hover:border-amber-500/40 p-3 rounded-2xl flex items-center justify-between cursor-pointer transition-all duration-200 active:scale-[0.99] group shadow-sm"
@@ -1064,7 +1085,6 @@ export default function Home() {
             {currentFit && !loading && (
               <section className="bg-neutral-950/90 border border-neutral-800 rounded-[28px] p-4 sm:p-5 flex flex-col gap-3.5 shadow-2xl animate-in fade-in slide-in-from-bottom-3 duration-300">
                 
-                {/* 2-Option Switcher */}
                 {recommendations && recommendations.length > 1 && (
                   <div className="grid grid-cols-2 gap-2 bg-neutral-900 p-1 rounded-2xl border border-neutral-800">
                     <button
@@ -1325,7 +1345,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* ================= PRIVACY & APP STORE COMPLIANCE MODAL ================= */}
+        {/* ================= PRIVACY MODAL ================= */}
         {showPrivacyModal && (
           <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
             <div className="w-full max-w-sm bg-neutral-900 border border-neutral-800 rounded-[32px] p-6 flex flex-col gap-4 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
@@ -1387,7 +1407,6 @@ export default function Home() {
               </div>
 
               <div className="flex flex-col gap-3.5 text-xs max-h-[360px] overflow-y-auto pr-1">
-                {/* Language Selection */}
                 <div className="flex flex-col gap-1.5">
                   <label className="font-bold text-neutral-300 flex items-center gap-1">
                     <Globe className="w-3.5 h-3.5 text-amber-400" /> {t.langSection}
@@ -1410,7 +1429,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Skin Undertone */}
                 <div className="flex flex-col gap-1.5">
                   <label className="font-bold text-neutral-300">{t.skinSection}</label>
                   <div className="grid grid-cols-2 gap-1.5">
@@ -1431,7 +1449,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Height */}
                 <div className="flex flex-col gap-1.5">
                   <label className="font-bold text-neutral-300">{t.heightSection}</label>
                   <div className="grid grid-cols-3 gap-1.5">
@@ -1452,7 +1469,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Body Build */}
                 <div className="flex flex-col gap-1.5">
                   <label className="font-bold text-neutral-300">{t.buildSection}</label>
                   <div className="grid grid-cols-3 gap-1.5">
@@ -1473,7 +1489,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Aesthetic */}
                 <div className="flex flex-col gap-1.5">
                   <label className="font-bold text-neutral-300">{t.styleSection}</label>
                   <div className="grid grid-cols-2 gap-1.5">
@@ -1495,7 +1510,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Save DNA Button */}
               <button
                 onClick={handleSaveDna}
                 className="w-full bg-gradient-to-r from-amber-500 via-rose-500 to-pink-600 hover:opacity-95 text-white font-bold py-3 rounded-2xl text-xs flex items-center justify-center gap-1.5 shadow-xl shadow-rose-500/20 active:scale-98 mt-1"
@@ -1507,7 +1521,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* ================= LOGIN / SIGN UP MODAL ================= */}
+        {/* ================= LOGIN / SIGN UP MODAL (WITH GOOGLE ONE-CLICK) ================= */}
         {showAuthModal && (
           <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
             <div className="w-full max-w-sm bg-neutral-900 border border-neutral-800 rounded-[32px] p-6 flex flex-col gap-4 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
@@ -1526,6 +1540,41 @@ export default function Home() {
                 <p className="text-xs text-neutral-400 mt-0.5">
                   {authMode === "login" ? t.authLoginSub : t.authSignupSub}
                 </p>
+              </div>
+
+              {/* DIRECT GOOGLE ACCOUNT BUTTON */}
+              <button
+                onClick={handleGoogleSignIn}
+                disabled={authLoading}
+                type="button"
+                className="w-full bg-white hover:bg-neutral-100 text-neutral-900 font-bold py-2.5 px-4 rounded-2xl text-xs flex items-center justify-center gap-2.5 shadow-md active:scale-98 transition-all disabled:opacity-50"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                  />
+                </svg>
+                <span>{t.googleSignIn}</span>
+              </button>
+
+              {/* OR DIVIDER */}
+              <div className="flex items-center gap-2 text-[10px] text-neutral-500 uppercase font-semibold">
+                <div className="h-[1px] bg-neutral-800 flex-1" />
+                <span>{t.orDivider}</span>
+                <div className="h-[1px] bg-neutral-800 flex-1" />
               </div>
 
               <form onSubmit={handleAuthSubmit} className="flex flex-col gap-3">
